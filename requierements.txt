@@ -1,0 +1,9 @@
+fastapi
+slowapi
+prisma
+autopep8
+pydantic[email]
+uvicorn
+python-decouple
+passlib[bcrypt]
+
