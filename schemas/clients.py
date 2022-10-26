@@ -29,5 +29,10 @@ class ClientSingUp(ClientBase):
     )
 
 
-class ClientOut(ClientBase):
-    id: UUID = Field(default_factory=UUID4)
+class clientLogin(BaseModel):
+    email: str = EmailStr(...)
+    password: str = Field(
+        ...,
+        min_length=8,
+        max_length=20,
+    )

@@ -2,26 +2,49 @@ from fastapi import (
     APIRouter, Body, HTTPException,
     status
 )
-from schemas.clients import ClientOut, ClientSingUp
-from db.clients_queries import create_client
-from passlib.context import CryptContext
+from prisma.errors import PrismaError
+from schemas.clients import ClientSingUp, clientLogin
+from db.clients_queries import create_client, get_client
+from security import hash_password, create_access_token, verify_password
+
 
 auth = APIRouter()
-
-pass_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
 @auth.post(
     path="/signup",
-    response_model=ClientOut,
+    status_code=status.HTTP_201_CREATED,
     tags=["auth"],
 )
 async def signup(client_data: ClientSingUp = Body(...)):
-    client_data.password = pass_context.hash(client_data.password)
+    client_data.password = hash_password(client_data.password)
     client = await create_client(client_data.dict())
-    if client is None:
+    if isinstance(client, PrismaError):
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="Email already registered",
+            detail=str(client),
         )
-    return dict(client)  # type: ignore
+    return {"message": "Client created successfully"}
+
+
+@auth.post(
+    path="/login",
+    status_code=status.HTTP_200_OK,
+    tags=["auth"],
+)
+async def login(client_data: clientLogin = Body(...)):
+    client = await get_client(client_data.email)
+    if isinstance(client, PrismaError):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(client),
+        )
+    if not verify_password(client_data.password, client.password):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect password",
+        )
+    access_token = create_access_token(
+        data={"sub": client.email}
+    )
+    return {"access_token": access_token, "token_type": "bearer"}
