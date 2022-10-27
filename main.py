@@ -1,11 +1,12 @@
 from fastapi import FastAPI
 from fastapi.responses import RedirectResponse
 from db.prisma_init import prisma
-from routes.auth import auth
+from routes import auth, client
 
 
 app = FastAPI()
-app.include_router(auth)
+app.include_router(auth.router)
+app.include_router(client.router)
 
 
 @app.get("/", include_in_schema=False)

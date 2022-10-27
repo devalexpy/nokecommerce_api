@@ -29,10 +29,5 @@ class ClientSingUp(ClientBase):
     )
 
 
-class clientLogin(BaseModel):
-    email: str = EmailStr(...)
-    password: str = Field(
-        ...,
-        min_length=8,
-        max_length=20,
-    )
+class clientOut(ClientBase):
+    pass
