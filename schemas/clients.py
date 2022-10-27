@@ -1,9 +1,9 @@
 from pydantic import (
     BaseModel, Field, EmailStr,
-    UUID4
 )
-from typing import Optional
-from uuid import UUID
+from typing import List
+from schemas.addresses import AddressesRelation
+from schemas.invoices import InvoiceRelation
 
 
 class ClientBase(BaseModel):
@@ -30,4 +30,8 @@ class ClientSingUp(ClientBase):
 
 
 class clientOut(ClientBase):
-    pass
+    addresses: List[AddressesRelation] = []
+    invoices: List[InvoiceRelation] = []
+
+    class Config:
+        orm_mode = True

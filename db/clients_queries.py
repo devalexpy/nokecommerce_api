@@ -20,5 +20,8 @@ async def get_client_by_email(email: str):
 
 async def get_client_by_id(id):
 
-    client = await prisma.clients.find_unique(where={"id": id})
+    client = await prisma.clients.find_unique(
+        where={"id": id},
+        include={"addresses": True, "invoices": True},
+    )
     return client

@@ -1,7 +1,6 @@
 from fastapi import APIRouter, Body, HTTPException, status, Depends
 from security import get_user_id
 from schemas.clients import clientOut
-from prisma.errors import PrismaError
 from db.clients_queries import get_client_by_id
 
 router = APIRouter(
