@@ -25,3 +25,15 @@ async def get_client_by_id(id):
         include={"addresses": True, "invoices": True},
     )
     return client
+
+
+async def update_client_data(id, client_data: dict):
+    try:
+        client = await prisma.clients.update(
+            where={"id": id},
+            data=client_data,
+            include={"addresses": True, "invoices": True},
+        )
+    except PrismaError as error:
+        return error
+    return client

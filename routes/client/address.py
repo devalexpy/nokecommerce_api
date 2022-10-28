@@ -2,6 +2,7 @@ from fastapi import APIRouter, Body, HTTPException, status, Depends
 from security import get_user_id
 from schemas.addresses import AddressesBase
 from db.addresses_queries import get_client_addresses, create_address
+from db.clients_queries import get_client_by_id
 from prisma.errors import PrismaError
 
 router = APIRouter(
@@ -15,6 +16,11 @@ router = APIRouter(
     status_code=status.HTTP_200_OK,
 )
 async def add_address(id=Depends(get_user_id), address: AddressesBase = Body(...)):
+    if await get_client_by_id(id) is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Client not found",
+        )
     addresses_data = await get_client_addresses(id)
     if not addresses_data:
         address.is_default = True

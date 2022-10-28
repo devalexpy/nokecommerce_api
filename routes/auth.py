@@ -6,6 +6,7 @@ from fastapi.security import OAuth2PasswordRequestForm
 from prisma.errors import PrismaError
 from schemas.clients import ClientSingUp
 from db.clients_queries import create_client, get_client_by_email
+from db.admin_queries import get_admin_by_email
 from security import hash_password, create_access_token, verify_password
 
 
@@ -34,12 +35,16 @@ async def signup(client_data: ClientSingUp = Body(...)):
     path="/login",
     status_code=status.HTTP_200_OK,
 )
-async def login(client_data: OAuth2PasswordRequestForm = Depends()):
+async def login(client_data: OAuth2PasswordRequestForm = Depends(), admin: bool = False):
+    detail = "Client not found"
+    if admin:
+        login_data = await get_admin_by_email(client_data.username)
+        detail = "Admin not found"
     login_data = await get_client_by_email(client_data.username)
     if login_data is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Client not found",
+            detail=detail
         )
     if not verify_password(client_data.password, login_data.password):
         raise HTTPException(

@@ -1,7 +1,8 @@
 from fastapi import FastAPI
 from fastapi.responses import RedirectResponse
 from db.prisma_init import prisma
-from routes import address, auth, client
+from routes import auth
+from routes.client import client, address
 
 
 app = FastAPI()

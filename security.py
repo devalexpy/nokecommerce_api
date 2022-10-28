@@ -7,6 +7,7 @@ from fastapi import Depends, HTTPException, status
 
 pass_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
+oauth2_scheme_admin = OAuth2PasswordBearer(tokenUrl="auth/login/admin")
 
 
 def hash_password(password: str):
