@@ -1,13 +1,15 @@
 from fastapi import (
     APIRouter, Body, HTTPException,
-    status, Depends
+    status, Depends, Query
 )
 from fastapi.security import OAuth2PasswordRequestForm
 from prisma.errors import PrismaError
-from schemas.clients import ClientSingUp
+from schemas.clients import ClientSingUp, ClientOut
+from schemas.admins import AdminOut
 from db.clients_queries import create_client, get_client_by_email
 from db.admin_queries import get_admin_by_email
 from security import hash_password, create_access_token, verify_password
+from typing import Optional
 
 
 router = APIRouter(
@@ -34,13 +36,16 @@ async def signup(client_data: ClientSingUp = Body(...)):
 @router.post(
     path="/login",
     status_code=status.HTTP_200_OK,
+    # response_model=ClientOut | AdminOut
 )
-async def login(client_data: OAuth2PasswordRequestForm = Depends(), admin: bool = False):
-    detail = "Client not found"
+async def login(client_data: OAuth2PasswordRequestForm = Depends(), admin: Optional[bool] = Query(default=False)):
+
     if admin:
         login_data = await get_admin_by_email(client_data.username)
         detail = "Admin not found"
-    login_data = await get_client_by_email(client_data.username)
+    else:
+        login_data = await get_client_by_email(client_data.username)
+        detail = "Client not found"
     if login_data is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -54,4 +59,8 @@ async def login(client_data: OAuth2PasswordRequestForm = Depends(), admin: bool 
     access_token = create_access_token(
         data={"sub": login_data.id}
     )
-    return {"access_token": access_token, "token_type": "bearer"}
+    login_data_dict = {key: value for key, value in login_data.dict(
+    ).items() if key not in ["id", "password"]}
+    login_data_dict.update(
+        {"access_token": access_token, "token_type": "bearer"})
+    return login_data_dict

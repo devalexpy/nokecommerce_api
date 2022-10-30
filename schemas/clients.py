@@ -1,9 +1,7 @@
 from pydantic import (
     BaseModel, Field, EmailStr,
 )
-from typing import List, Optional
-from schemas.addresses import AddressesRelation
-from schemas.invoices import InvoiceRelation
+from typing import Optional
 
 
 class ClientBase(BaseModel):
@@ -18,7 +16,7 @@ class ClientBase(BaseModel):
         max_length=20,
     )
     email: str = EmailStr(...)
-    phone_number: str = Field(...)
+    phone_number: Optional[str] = Field(None)
 
 
 class ClientSingUp(ClientBase):
@@ -29,12 +27,14 @@ class ClientSingUp(ClientBase):
     )
 
 
-class clientOut(ClientBase):
-    addresses: List[AddressesRelation] = []
-    invoices: List[InvoiceRelation] = []
+class ClientForQuery(ClientBase):
+    password: str = Field(...)
+    id: str = Field(...)
 
-    class Config:
-        orm_mode = True
+
+class ClientOut(ClientBase):
+    access_token: str = Field(...)
+    token_type: str = Field(...)
 
 
 class ClientUpdate(BaseModel):
@@ -53,10 +53,18 @@ class ClientUpdate(BaseModel):
         min_length=1,
         max_length=20,
     )
-    new_password: Optional[str] = Field(
-        None,
+    email: Optional[str] = EmailStr(None)
+    phone_number: Optional[str] = Field(None)
+
+
+class ClientUpdatePassword(BaseModel):
+    password: str = Field(
+        ...,
         min_length=8,
         max_length=20,
     )
-    email: Optional[str] = EmailStr(None)
-    phone_number: Optional[str] = Field(None)
+    new_password: str = Field(
+        ...,
+        min_length=8,
+        max_length=20,
+    )

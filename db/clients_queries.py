@@ -1,7 +1,7 @@
-from pyexpat import model
-from select import select
 from db.prisma_init import prisma
 from prisma.errors import PrismaError
+
+from schemas.clients import ClientForQuery
 
 
 async def create_client(client: dict):
@@ -14,15 +14,21 @@ async def create_client(client: dict):
 
 async def get_client_by_email(email: str):
 
-    client = await prisma.clients.find_unique(where={"email": email})
+    client = await prisma.query_first(
+        f"""
+        SELECT id, name, last_name, email, phone_number, password
+        FROM clients
+        WHERE email = '{email}'
+        """,
+        model=ClientForQuery,
+    )
     return client
 
 
 async def get_client_by_id(id):
 
     client = await prisma.clients.find_unique(
-        where={"id": id},
-        include={"addresses": True, "invoices": True},
+        where={"id": id}
     )
     return client
 
@@ -31,8 +37,7 @@ async def update_client_data(id, client_data: dict):
     try:
         client = await prisma.clients.update(
             where={"id": id},
-            data=client_data,
-            include={"addresses": True, "invoices": True},
+            data=client_data
         )
     except PrismaError as error:
         return error
