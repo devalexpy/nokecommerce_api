@@ -36,30 +36,51 @@ async def signup(client_data: ClientSingUp = Body(...)):
 @router.post(
     path="/login",
     status_code=status.HTTP_200_OK,
-    # response_model=ClientOut | AdminOut
+    response_model=ClientOut
 )
-async def login(client_data: OAuth2PasswordRequestForm = Depends(), admin: Optional[bool] = Query(default=False)):
-
-    if admin:
-        login_data = await get_admin_by_email(client_data.username)
-        detail = "Admin not found"
-    else:
-        login_data = await get_client_by_email(client_data.username)
-        detail = "Client not found"
-    if login_data is None:
+async def login(client_data: OAuth2PasswordRequestForm = Depends()):
+    client = await get_client_by_email(client_data.username)
+    if client is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=detail
+            detail="Client not found",
         )
-    if not verify_password(client_data.password, login_data.password):
+    if not verify_password(client_data.password, client.password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect password",
         )
     access_token = create_access_token(
-        data={"sub": login_data.id}
+        data={"sub": client.id}
     )
-    login_data_dict = {key: value for key, value in login_data.dict(
+    login_data_dict = {key: value for key, value in client.dict(
+    ).items() if key not in ["id", "password"]}
+    login_data_dict.update(
+        {"access_token": access_token, "token_type": "bearer"})
+    return login_data_dict
+
+
+@router.post(
+    path="/login/admin",
+    status_code=status.HTTP_200_OK,
+    response_model=AdminOut
+)
+async def login_admin(admin_data: OAuth2PasswordRequestForm = Depends()):
+    admin = await get_admin_by_email(admin_data.username)
+    if admin is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Admin not found",
+        )
+    if not verify_password(admin_data.password, admin.password):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect password",
+        )
+    access_token = create_access_token(
+        data={"sub": admin.id}
+    )
+    login_data_dict = {key: value for key, value in admin.dict(
     ).items() if key not in ["id", "password"]}
     login_data_dict.update(
         {"access_token": access_token, "token_type": "bearer"})

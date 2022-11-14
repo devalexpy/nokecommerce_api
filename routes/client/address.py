@@ -1,15 +1,15 @@
 from fastapi import (
     APIRouter, Body, HTTPException,
-    status, Depends, Query
+    status, Depends, Path
 )
-from security import get_user_id
+from security import get_client
 from schemas.addresses import (
     AddressBase, AddressesOut, AddressOut,
     AddressUpdate
 )
 from db.addresses_queries import (
     create_address, get_addresses_by_client_id, update_address_data,
-    get_default_address, delete_address
+    get_default_address, delete_address, get_address_by_id
 )
 from db.clients_queries import get_client_by_id
 from prisma.errors import PrismaError
@@ -26,14 +26,8 @@ router = APIRouter(
     status_code=status.HTTP_200_OK,
     response_model=AddressesOut
 )
-async def get_client_addresses(id=Depends(get_user_id)):
-    client = await get_client_by_id(id)
-    if client is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Client not found",
-        )
-    addresses = {"addresses": await get_addresses_by_client_id(id)}
+async def get_client_addresses(client=Depends(get_client)):
+    addresses = {"addresses": await get_addresses_by_client_id(client)}
     return addresses
 
 
@@ -41,13 +35,8 @@ async def get_client_addresses(id=Depends(get_user_id)):
     path="/",
     status_code=status.HTTP_200_OK,
 )
-async def add_address(id=Depends(get_user_id), address: AddressBase = Body(...)):
-    if await get_client_by_id(id) is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Client not found",
-        )
-    addresses_data = await get_addresses_by_client_id(id)
+async def add_address(client=Depends(get_client), address: AddressBase = Body(...)):
+    addresses_data = await get_addresses_by_client_id(client.id)
     is_default = False
     if not addresses_data:
         is_default = True
@@ -57,7 +46,7 @@ async def add_address(id=Depends(get_user_id), address: AddressBase = Body(...))
             detail="Address already exists",
         )
     address_data = address.dict()
-    address_data["client_id"] = id
+    address_data["client_id"] = client
     address_data["is_default"] = is_default
     address_data = await create_address(address_data)
     if isinstance(address, PrismaError):
@@ -70,20 +59,26 @@ async def add_address(id=Depends(get_user_id), address: AddressBase = Body(...))
 
 
 @router.put(
-    path="/",
+    path="/{address_id}",
     status_code=status.HTTP_200_OK,
     response_model=AddressOut
 )
-async def update_address(id=Depends(get_user_id), address_data: AddressUpdate = Body(...), address_id: str = Query(...)):
-    if await get_client_by_id(id) is None:
+async def update_address(client=Depends(get_client), address_data: AddressUpdate = Body(...), address_id: str = Path(...)):
+    address = await get_address_by_id(address_id)
+    if not address:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Client not found",
+            detail="Address not found",
+        )
+    if address.client_id != client.id:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Unauthorized",
         )
     if address_id is None:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Address id is required",
+            detail="Address client is required",
         )
     new_address = {"address": address_data.new_address}
     address_updated = await update_address_data(new_address)
@@ -92,27 +87,32 @@ async def update_address(id=Depends(get_user_id), address_data: AddressUpdate = 
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(address_updated),
         )
-
     return address_updated
 
 
 @router.put(
-    path="/default",
+    path="/{address_id}/default",
     status_code=status.HTTP_200_OK,
 )
-async def set_default_address(id=Depends(get_user_id), address_id: str = Query(...)):
-    if await get_client_by_id(id) is None:
+async def set_default_address(client=Depends(get_client), address_id: str = Path(...)):
+    address = await get_address_by_id(address_id)
+    if not address:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Client not found",
+            detail="Address not found",
         )
-    default_address = await get_default_address(id)
-    if default_address.id == address_id:
+    if address.client_id != client.id:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Unauthorized",
+        )
+    default_address = await get_default_address(client.id)
+    if default_address.client == address_id:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Address is already default",
         )
-    await update_address_data(default_address.id, {"is_default": False})
+    await update_address_data(default_address.client, {"is_default": False})
     addres_updated = await update_address_data(address_id, {"is_default": True})
     if isinstance(addres_updated, PrismaError):
         raise HTTPException(
@@ -123,14 +123,20 @@ async def set_default_address(id=Depends(get_user_id), address_id: str = Query(.
 
 
 @router.delete(
-    path="/",
+    path="/{address_id}",
     status_code=status.HTTP_200_OK,
 )
-async def delete_client_address(id=Depends(get_user_id), address_id: str = Query(...)):
-    if await get_client_by_id(id) is None:
+async def delete_client_address(client=Depends(get_client), address_id: str = Path(...)):
+    address = await get_address_by_id(address_id)
+    if not address:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Client not found",
+            detail="Address not found",
+        )
+    if address.client_id != client.id:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Unauthorized",
         )
     if deleted_address.is_default:
         raise HTTPException(
