@@ -5,7 +5,7 @@ class AdminBase(BaseModel):
     name: str = Field(...)
     last_name: str = Field(...)
     email: str = Field(...)
-    phone_number: str = Field(...)
+    phone_number: str = Field(None)
     company_name: str = Field(...)
 
 
@@ -15,5 +15,5 @@ class AdminOut(AdminBase):
 
 
 class AdminForQuery(AdminBase):
-    id: int = Field(...)
+    id: str = Field(...)
     password: str = Field(...)
