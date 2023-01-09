@@ -27,7 +27,7 @@ router = APIRouter(
     response_model=AddressesOut
 )
 async def get_client_addresses(client=Depends(get_client)):
-    addresses = {"addresses": await get_addresses_by_client_id(client)}
+    addresses = {"addresses": await get_addresses_by_client_id(client.id)}
     return addresses
 
 
@@ -46,7 +46,7 @@ async def add_address(client=Depends(get_client), address: AddressBase = Body(..
             detail="Address already exists",
         )
     address_data = address.dict()
-    address_data["client_id"] = client
+    address_data["client_id"] = client.id
     address_data["is_default"] = is_default
     address_data = await create_address(address_data)
     if isinstance(address, PrismaError):
