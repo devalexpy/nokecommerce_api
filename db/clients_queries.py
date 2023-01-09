@@ -26,7 +26,6 @@ async def get_client_by_email(email: str):
 
 
 async def get_client_by_id(id):
-
     client = await prisma.clients.find_unique(
         where={"id": id}
     )
@@ -42,3 +41,8 @@ async def update_client_data(id, client_data: dict):
     except PrismaError as error:
         return error
     return client
+
+
+async def get_all_clients(limit: int = None):
+    clients = await prisma.clients.find_many(take=limit)
+    return clients
