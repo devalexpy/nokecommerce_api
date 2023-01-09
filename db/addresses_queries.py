@@ -1,4 +1,3 @@
-from turtle import update
 from db.prisma_init import prisma
 from prisma.errors import PrismaError
 
